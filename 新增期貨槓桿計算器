@@ -1,0 +1,290 @@
+index.html
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台指期槓桿計算器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 8px;
+            display: none;
+        }
+        .result h3 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .section {
+                padding: 10px;
+            }
+        }
+        .info-box {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>台指期槓桿計算器</h1>
+        
+        <div class="section">
+            <label for="currentIndex">台指期點位</label>
+            <input type="number" id="currentIndex" placeholder="例如：20000" value="20000">
+            
+            <button onclick="calculateMargins()">計算每種品類型各槓桿保證金需求</button>
+            
+            <div id="marginResults" style="overflow-x: auto;">
+                <h3>保證金需求計算結果</h3>
+                <table id="marginTable">
+                    <thead>
+                        <tr>
+                            <th>槓桿倍數</th>
+                            <th>大台單口保證金(萬元)</th>
+                            <th>小台單口保證金(萬元)</th>
+                            <th>微台單口保證金(萬元)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marginTableBody">
+                        <!-- 結果會動態產生 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>投資規劃</h2>
+            <div class="info-box">
+                計算您的投資規劃實際槓桿與再平衡點位。
+            </div>
+            <label for="futureType">選擇交易商品</label>
+            <select id="futureType">
+                <option value="large">大台 (一點200元)</option>
+                <option value="small">小台 (一點50元)</option>
+                <option value="micro">微台 (一點10元)</option>
+            </select>
+            
+            <label for="investmentAmount">預計投入資金 (萬元)</label>
+            <input type="number" id="investmentAmount" placeholder="例如：60">
+            
+            <label for="totalContracts">預計交易總口數</label>
+            <input type="number" id="totalContracts" placeholder="例如：10">
+            
+            <label for="maxLossPercentage">預計可接受虧損 (%)</label>
+            <input type="number" id="maxLossPercentage" placeholder="例如：25" min="1" max="99">
+            
+            <button onclick="calculateLeveragePlan()">計算投資規劃槓桿</button>
+            
+            <div id="planResult" class="result">
+                <h3>投資規劃分析結果</h3>
+                <p id="leverageResult"></p>
+                <p id="marginPerContract"></p>
+                <p id="rebalanceTable"></p>
+                <h4>再平衡建議</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>台指期點位</th>
+                            <th>當前槓桿倍數</th>
+                            <th>建議每口保證金(萬元)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rebalanceTableBody">
+                        <!-- 再平衡表格會動態產生 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 頁面載入後初始化
+        window.onload = function() {
+            calculateMargins();
+        };
+
+        // 計算各槓桿下的保證金需求
+        function calculateMargins() {
+            const currentIndex = parseFloat(document.getElementById('currentIndex').value);
+            if (isNaN(currentIndex) || currentIndex <= 0) {
+                alert('請輸入有效的指數點位');
+                return;
+            }
+
+            const tableBody = document.getElementById('marginTableBody');
+            tableBody.innerHTML = '';
+
+            // 計算3-10倍槓桿的保證金
+            for (let leverage = 3; leverage <= 10; leverage++) {
+                const largeMargin = Math.round((currentIndex * 200 / leverage) / 10000) / 10; // 轉換為萬元並保留1位小數
+                const smallMargin = Math.round((currentIndex * 50 / leverage) / 10000) / 10;
+                const microMargin = Math.round((currentIndex * 10 / leverage) / 10000) / 10;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${leverage}倍</td>
+                    <td>${largeMargin.toFixed(1)}</td>
+                    <td>${smallMargin.toFixed(1)}</td>
+                    <td>${microMargin.toFixed(1)}</td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+
+        // 計算交易計畫的槓桿與再平衡點位
+        function calculateLeveragePlan() {
+            // 獲取使用者輸入
+            const futureType = document.getElementById('futureType').value;
+            const investmentAmount = parseFloat(document.getElementById('investmentAmount').value) * 10000; // 轉換萬元為元
+            const totalContracts = parseFloat(document.getElementById('totalContracts').value);
+            const maxLossPercentage = parseFloat(document.getElementById('maxLossPercentage').value);
+            const currentIndex = parseFloat(document.getElementById('currentIndex').value); // 使用當前輸入的台指期點位
+            const planIndex = currentIndex; // 使用當前台指期點位作為計劃點位
+
+            // 驗證輸入
+            if (isNaN(investmentAmount) || investmentAmount <= 0 ||
+                isNaN(totalContracts) || totalContracts <= 0 ||
+                isNaN(maxLossPercentage) || maxLossPercentage <= 0 || maxLossPercentage >= 100 ||
+                isNaN(planIndex) || planIndex <= 0) {
+                alert('請確保所有輸入欄位都有有效數值');
+                return;
+            }
+
+            // 計算可用資金 (扣除可接受虧損後)
+            const availableFunds = investmentAmount * (1 - maxLossPercentage / 100);
+            const marginPerContract = availableFunds / totalContracts;
+
+            // 計算不同商品的點值
+            let pointValue = 0;
+            let futureTypeText = '';
+            switch (futureType) {
+                case 'large':
+                    pointValue = 200;
+                    futureTypeText = '大台';
+                    break;
+                case 'small':
+                    pointValue = 50;
+                    futureTypeText = '小台';
+                    break;
+                case 'micro':
+                    pointValue = 10;
+                    futureTypeText = '微台';
+                    break;
+            }
+
+            // 計算初始槓桿倍數
+            const initialLeverage = (planIndex * pointValue) / marginPerContract;
+
+            // 顯示結果（將保證金轉換為萬元）
+            document.getElementById('leverageResult').innerText = `您的投資規劃槓桿倍數為: ${initialLeverage.toFixed(2)}倍`;
+            document.getElementById('marginPerContract').innerText = `每口保證金為: ${(marginPerContract / 10000).toFixed(1)} 萬元`;
+
+            // 生成再平衡表格
+            const rebalanceTableBody = document.getElementById('rebalanceTableBody');
+            rebalanceTableBody.innerHTML = '';
+
+            // 計算指數上漲時的再平衡情況
+            // 從原始點位開始，每增加20%計算一次
+            const percentages = [0, 10, 20, 30, 40, 50];
+            
+            for (let percent of percentages) {
+                const newIndex = planIndex * (1 + percent / 100);
+                
+                // 使用原始保證金計算新的槓桿倍數
+                const newLeverage = (newIndex * pointValue) / marginPerContract;
+                
+                // 計算維持原始槓桿所需的新保證金（轉換為萬元）
+                const rebalancedMargin = ((newIndex * pointValue) / initialLeverage) / 10000;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${newIndex.toFixed(0)}</td>
+                    <td>${newLeverage.toFixed(2)}倍</td>
+                    <td>${rebalancedMargin.toFixed(1)}</td>
+                `;
+                rebalanceTableBody.appendChild(row);
+            }
+
+            // 顯示結果區域
+            document.getElementById('planResult').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
