@@ -1,10 +1,9 @@
-index.html
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台指期槓桿計算器</title>
+    <title>台灣指數期貨槓桿計算器</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -103,13 +102,17 @@ index.html
 </head>
 <body>
     <div class="container">
-        <h1>台指期槓桿計算器</h1>
+        <h1>台灣指數期貨槓桿計算器</h1>
         
         <div class="section">
-            <label for="currentIndex">台指期點位</label>
+            <h2>目前指數與保證金計算</h2>
+            <div class="info-box">
+                此計算器使用您輸入的點位計算各種槓桿下的單口保證金需求。
+            </div>
+            <label for="currentIndex">當前台指期貨點位</label>
             <input type="number" id="currentIndex" placeholder="例如：20000" value="20000">
             
-            <button onclick="calculateMargins()">計算每種品類型各槓桿保證金需求</button>
+            <button onclick="calculateMargins()">計算各槓桿保證金需求</button>
             
             <div id="marginResults" style="overflow-x: auto;">
                 <h3>保證金需求計算結果</h3>
@@ -117,9 +120,9 @@ index.html
                     <thead>
                         <tr>
                             <th>槓桿倍數</th>
-                            <th>大台單口保證金(萬元)</th>
-                            <th>小台單口保證金(萬元)</th>
-                            <th>微台單口保證金(萬元)</th>
+                            <th>大台單口保證金</th>
+                            <th>小台單口保證金</th>
+                            <th>微台單口保證金</th>
                         </tr>
                     </thead>
                     <tbody id="marginTableBody">
@@ -130,9 +133,9 @@ index.html
         </div>
         
         <div class="section">
-            <h2>投資規劃</h2>
+            <h2>槓桿交易計劃計算</h2>
             <div class="info-box">
-                計算您的投資規劃實際槓桿與再平衡點位。
+                計算您的交易計畫實際槓桿與再平衡點位。
             </div>
             <label for="futureType">選擇交易商品</label>
             <select id="futureType">
@@ -141,8 +144,8 @@ index.html
                 <option value="micro">微台 (一點10元)</option>
             </select>
             
-            <label for="investmentAmount">預計投入資金 (萬元)</label>
-            <input type="number" id="investmentAmount" placeholder="例如：60">
+            <label for="investmentAmount">預計投入資金 (元)</label>
+            <input type="number" id="investmentAmount" placeholder="例如：600000">
             
             <label for="totalContracts">預計交易總口數</label>
             <input type="number" id="totalContracts" placeholder="例如：10">
@@ -150,20 +153,23 @@ index.html
             <label for="maxLossPercentage">預計可接受虧損 (%)</label>
             <input type="number" id="maxLossPercentage" placeholder="例如：25" min="1" max="99">
             
-            <button onclick="calculateLeveragePlan()">計算投資規劃槓桿</button>
+            <label for="planIndex">計畫開始交易時的指數點位</label>
+            <input type="number" id="planIndex" placeholder="例如：20000" value="20000">
+            
+            <button onclick="calculateLeveragePlan()">計算交易計畫</button>
             
             <div id="planResult" class="result">
-                <h3>投資規劃分析結果</h3>
+                <h3>交易計畫分析結果</h3>
                 <p id="leverageResult"></p>
                 <p id="marginPerContract"></p>
                 <p id="rebalanceTable"></p>
-                <h4>再平衡建議</h4>
+                <h4>再平衡點位表</h4>
                 <table>
                     <thead>
                         <tr>
-                            <th>台指期點位</th>
-                            <th>當前槓桿倍數</th>
-                            <th>建議每口保證金(萬元)</th>
+                            <th>指數點位</th>
+                            <th>槓桿倍數</th>
+                            <th>建議每口保證金</th>
                         </tr>
                     </thead>
                     <tbody id="rebalanceTableBody">
@@ -193,16 +199,16 @@ index.html
 
             // 計算3-10倍槓桿的保證金
             for (let leverage = 3; leverage <= 10; leverage++) {
-                const largeMargin = Math.round((currentIndex * 200 / leverage) / 10000) / 10; // 轉換為萬元並保留1位小數
-                const smallMargin = Math.round((currentIndex * 50 / leverage) / 10000) / 10;
-                const microMargin = Math.round((currentIndex * 10 / leverage) / 10000) / 10;
+                const largeMargin = Math.round(currentIndex * 200 / leverage);
+                const smallMargin = Math.round(currentIndex * 50 / leverage);
+                const microMargin = Math.round(currentIndex * 10 / leverage);
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${leverage}倍</td>
-                    <td>${largeMargin.toFixed(1)}</td>
-                    <td>${smallMargin.toFixed(1)}</td>
-                    <td>${microMargin.toFixed(1)}</td>
+                    <td>${largeMargin.toLocaleString()}</td>
+                    <td>${smallMargin.toLocaleString()}</td>
+                    <td>${microMargin.toLocaleString()}</td>
                 `;
                 tableBody.appendChild(row);
             }
@@ -212,11 +218,10 @@ index.html
         function calculateLeveragePlan() {
             // 獲取使用者輸入
             const futureType = document.getElementById('futureType').value;
-            const investmentAmount = parseFloat(document.getElementById('investmentAmount').value) * 10000; // 轉換萬元為元
+            const investmentAmount = parseFloat(document.getElementById('investmentAmount').value);
             const totalContracts = parseFloat(document.getElementById('totalContracts').value);
             const maxLossPercentage = parseFloat(document.getElementById('maxLossPercentage').value);
-            const currentIndex = parseFloat(document.getElementById('currentIndex').value); // 使用當前輸入的台指期點位
-            const planIndex = currentIndex; // 使用當前台指期點位作為計劃點位
+            const planIndex = parseFloat(document.getElementById('planIndex').value);
 
             // 驗證輸入
             if (isNaN(investmentAmount) || investmentAmount <= 0 ||
@@ -233,7 +238,6 @@ index.html
 
             // 計算不同商品的點值
             let pointValue = 0;
-            let futureTypeText = '';
             switch (futureType) {
                 case 'large':
                     pointValue = 200;
@@ -249,35 +253,29 @@ index.html
                     break;
             }
 
-            // 計算初始槓桿倍數
-            const initialLeverage = (planIndex * pointValue) / marginPerContract;
+            // 計算槓桿倍數
+            const leverage = (planIndex * pointValue) / marginPerContract;
 
-            // 顯示結果（將保證金轉換為萬元）
-            document.getElementById('leverageResult').innerText = `您的投資規劃槓桿倍數為: ${initialLeverage.toFixed(2)}倍`;
-            document.getElementById('marginPerContract').innerText = `每口保證金為: ${(marginPerContract / 10000).toFixed(1)} 萬元`;
+            // 顯示結果
+            document.getElementById('leverageResult').innerText = `您的交易計畫槓桿倍數為: ${leverage.toFixed(2)}倍`;
+            document.getElementById('marginPerContract').innerText = `每口保證金為: ${marginPerContract.toLocaleString()} 元`;
 
             // 生成再平衡表格
             const rebalanceTableBody = document.getElementById('rebalanceTableBody');
             rebalanceTableBody.innerHTML = '';
 
-            // 計算指數上漲時的再平衡情況
-            // 從原始點位開始，每增加20%計算一次
+            // 計算指數上漲10%、20%、30%、40%、50%時的再平衡情況
             const percentages = [0, 10, 20, 30, 40, 50];
-            
             for (let percent of percentages) {
                 const newIndex = planIndex * (1 + percent / 100);
-                
-                // 使用原始保證金計算新的槓桿倍數
                 const newLeverage = (newIndex * pointValue) / marginPerContract;
-                
-                // 計算維持原始槓桿所需的新保證金（轉換為萬元）
-                const rebalancedMargin = ((newIndex * pointValue) / initialLeverage) / 10000;
+                const rebalancedMargin = (newIndex * pointValue) / leverage;
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${newIndex.toFixed(0)}</td>
                     <td>${newLeverage.toFixed(2)}倍</td>
-                    <td>${rebalancedMargin.toFixed(1)}</td>
+                    <td>${rebalancedMargin.toLocaleString(undefined, {maximumFractionDigits: 0})} 元</td>
                 `;
                 rebalanceTableBody.appendChild(row);
             }
